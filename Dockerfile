@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY src/ /app/src/
 COPY tests/ /app/tests/
+COPY fixtures/ /app/fixtures/
 RUN mkdir -p /data
 ENV SVCDESK_DB=/data/svcdesk.db
 ENV SVCDESK_TEST_CLOCK="1"

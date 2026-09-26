@@ -1,0 +1,14 @@
+[
+  {
+    "message": "Lab 1 specs",
+    "sha": "25b61342d50345b5c12ad709411c9d9c890e797e"
+  },
+  {
+    "message": "Update itsmlab.yaml\n\nConfigure the repository name.",
+    "sha": "51f54c4437916c2422e31361ae68e0672a3969cc"
+  },
+  {
+    "message": "Initial commit",
+    "sha": "7c56d15cd23334ca464f60f9995d3b0925cff84b"
+  }
+]

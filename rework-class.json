@@ -1,0 +1,9 @@
+{
+  "source": "gh api repos/swasik/itsm-svcdesk/commits --paginate --jq '.[] | {sha, message: .commit.message}'",
+  "captured_at": "2026-09-26T00:00:00Z",
+  "capture_path": "rework-class-capture.json",
+  "sha256": "7733b4c573caca63dd78218c3de21312a0456fa8577472a7f65436a39b1fc5b0",
+  "deployments": 3,
+  "rework_deployments": 0,
+  "deployment_rework_rate": 0.0
+}
