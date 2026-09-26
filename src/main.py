@@ -1,4 +1,4 @@
-# ai-generated: 80% - FastAPI shell created from the course requirements and HTTP contract; no ticket logic yet
+# ai-generated: 80% - FastAPI shell created from the course requirements and HTTP contract; persistence bootstrap added for T02 only
 from __future__ import annotations
 
 from typing import Any
@@ -8,7 +8,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from src.persistence import init_db
+
 app = FastAPI(title="svcdesk", version="0.1.0")
+
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    init_db()
 
 
 @app.get("/health")
