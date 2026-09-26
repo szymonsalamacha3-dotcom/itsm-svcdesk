@@ -159,6 +159,35 @@ class TicketStore:
             rows = connection.execute(sql, tuple(parameters)).fetchall()
         return [_ticket_row_to_dict(row) for row in rows]
 
+    def update_ticket(self, ticket_id: str, ticket: dict[str, Any]) -> dict[str, Any]:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE tickets SET
+                    title = ?, description = ?, reporter_json = ?, impact = ?, urgency = ?, priority = ?,
+                    state = ?, created_at = ?, acknowledged_at = ?, resolved_at = ?, closed_at = ?,
+                    related_to = ?, sla_json = ?
+                WHERE id = ?
+                """,
+                (
+                    str(ticket.get("title") or ""),
+                    str(ticket.get("description") or ""),
+                    _serialize_json(ticket.get("reporter") or {}),
+                    ticket.get("impact"),
+                    ticket.get("urgency"),
+                    ticket.get("priority"),
+                    ticket.get("state"),
+                    str(ticket.get("created_at") or _utc_now()),
+                    ticket.get("acknowledged_at"),
+                    ticket.get("resolved_at"),
+                    ticket.get("closed_at"),
+                    ticket.get("related_to"),
+                    _serialize_json(ticket.get("sla") or {}),
+                    ticket_id,
+                ),
+            )
+        return self.get_ticket(ticket_id) or ticket
+
 
 def init_db(db_path: str | None = None) -> str:
     store = TicketStore(db_path)
