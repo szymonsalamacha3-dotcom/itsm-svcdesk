@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError as FastAPIRequestValidatio
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from src.dora import compute_dora_metrics
 from src.persistence import TicketStore
 from src.service import (
     compute_ticket_sla,
@@ -68,6 +69,41 @@ async def create_ticket(request: Request) -> JSONResponse:
     }
     created = store.create_ticket(ticket)
     return JSONResponse(status_code=201, content=created)
+
+
+@app.post("/dora/metrics")
+async def dora_metrics(request: Request) -> JSONResponse:
+    try:
+        payload = await request.json()
+    except Exception:
+        return error_response(400, "validation", "invalid request body")
+    try:
+        result = compute_dora_metrics(payload)
+    except DomainRequestValidationError as exc:
+        return error_response(exc.status_code, exc.code, exc.message)
+    except ValueError as exc:
+        return error_response(400, "validation", str(exc))
+    return JSONResponse(content=result)
+
+
+@app.get("/dora/ticket-events")
+async def dora_ticket_events() -> JSONResponse:
+    items = []
+    for ticket in store.list_tickets():
+        for phase, key in (("created", "created_at"), ("acknowledged", "acknowledged_at"), ("resolved", "resolved_at"), ("closed", "closed_at")):
+            value = ticket.get(key)
+            if value is None:
+                continue
+            state = "new" if phase == "created" else phase
+            items.append({
+                "ticket_id": ticket["id"],
+                "at": value,
+                "phase": phase,
+                "priority": ticket.get("priority"),
+                "state": state,
+            })
+    items.sort(key=lambda item: (item["at"], item["ticket_id"]))
+    return JSONResponse(content=items)
 
 
 @app.get("/tickets")

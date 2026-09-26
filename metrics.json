@@ -1,0 +1,33 @@
+{
+  "anomalies": {
+    "commits_never_on_main": 4,
+    "deployments_without_commits": 4,
+    "negative_lead_time_pairs": 3,
+    "overlapping_incident_pairs": 11,
+    "revert_chains_collapsed": 2
+  },
+  "change_fail_rate": 0.190476,
+  "change_lead_time_seconds_p50": 375643,
+  "counts": {
+    "changes": 86,
+    "deployments": 42,
+    "failed_deployments": 8,
+    "lead_time_pairs": 125,
+    "open_failures": 1,
+    "recovered_failures": 7,
+    "rework_deployments": 5,
+    "successful_deployments": 34
+  },
+  "deployment_frequency_per_day": 2.0,
+  "deployment_rework_rate": 0.119048,
+  "failed_deployment_recovery_time_seconds_p50": 15786,
+  "ground_truth": {
+    "changes_delivered": 65,
+    "true_change_lead_time_seconds_p50": 539452
+  },
+  "spec_version": "1.0.0",
+  "window": {
+    "from": "2026-09-01T00:00:00Z",
+    "to": "2026-09-22T00:00:00Z"
+  }
+}
