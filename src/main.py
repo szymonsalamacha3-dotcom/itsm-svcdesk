@@ -1,11 +1,15 @@
 # ai-generated: 95% - full FastAPI implementation for T04-T12 while preserving the T01-T03 foundation and C1/C2/C3 decisions
 from __future__ import annotations
 
+import os
+import time
 from typing import Any
 
+import httpx
 from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError as FastAPIRequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from prometheus_client import CONTENT_TYPE_LATEST, Histogram, generate_latest
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from src.dora import compute_dora_metrics
@@ -21,10 +25,41 @@ from src.validation import RequestValidationError as DomainRequestValidationErro
 
 app = FastAPI(title="svcdesk", version="0.1.0")
 store = TicketStore()
+request_duration = Histogram(
+    "http_server_request_duration_seconds",
+    "Duration of HTTP server requests in seconds",
+    labelnames=("http_request_method", "http_route", "http_response_status_code"),
+    buckets=(
+        0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.075, 0.09, 0.1,
+        0.12, 0.14, 0.16, 0.17, 0.18, 0.19, 0.2, 0.21, 0.22, 0.24,
+        0.27, 0.3, 0.4, 0.5, 0.75, 1, 1.5, 2, 5, 10,
+    ),
+)
 
 
 def error_response(status_code: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status_code, content={"error": {"code": code, "message": message}})
+
+
+@app.middleware("http")
+async def observe_request_duration(request: Request, call_next):
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    started_at = time.perf_counter()
+    status_code = 500
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    finally:
+        route = request.scope.get("route")
+        route_template = getattr(route, "path", "unmatched")
+        request_duration.labels(
+            http_request_method=request.method,
+            http_route=route_template,
+            http_response_status_code=str(status_code),
+        ).observe(time.perf_counter() - started_at)
 
 
 @app.on_event("startup")
@@ -35,6 +70,25 @@ async def startup_event() -> None:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "svcdesk"}
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics() -> Response:
+    return Response(content=generate_latest(), headers={"Content-Type": CONTENT_TYPE_LATEST})
+
+
+@app.get("/kb/search")
+async def search_knowledge_base(q: str = Query(min_length=1, max_length=200)) -> JSONResponse:
+    index_url = os.getenv("KB_INDEX_URL", "http://kb-index:8080").rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            upstream = await client.get(f"{index_url}/search", params={"q": q})
+        if upstream.status_code != 200:
+            return error_response(502, "upstream_unavailable", "knowledge index unavailable")
+        payload = upstream.json()
+        return JSONResponse(content={"query": q, "hits": payload["hits"]})
+    except (httpx.RequestError, KeyError, ValueError):
+        return error_response(502, "upstream_unavailable", "knowledge index unavailable")
 
 
 @app.post("/tickets")

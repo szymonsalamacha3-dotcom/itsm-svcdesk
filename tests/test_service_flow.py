@@ -95,3 +95,75 @@ def test_sla_and_test_clock(client):
     assert body["priority"] == "P1"
     assert body["ack_due_at"] == "2026-10-14T10:15:00Z"
     assert body["resolve_due_at"] == "2026-10-14T14:00:00Z"
+
+
+def test_kb_search_calls_index_once_and_exposes_request_metrics(client, monkeypatch):
+    calls = []
+
+    class FakeResponse:
+        status_code = 200
+
+        @staticmethod
+        def json():
+            return {"hits": [{"id": "kb-1", "title": "VPN", "score": 0.9}]}
+
+    class FakeAsyncClient:
+        def __init__(self, timeout):
+            assert timeout >= 2
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_value, traceback):
+            return None
+
+        async def get(self, url, params):
+            calls.append((url, params))
+            return FakeResponse()
+
+    monkeypatch.setattr(main.httpx, "AsyncClient", FakeAsyncClient)
+    response = client.get("/kb/search?q=vpn%20drops")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "query": "vpn drops",
+        "hits": [{"id": "kb-1", "title": "VPN", "score": 0.9}],
+    }
+    assert calls == [("http://kb-index:8080/search", {"q": "vpn drops"})]
+
+    metrics_response = client.get("/metrics", headers={"Accept": "text/plain;version=0.0.4"})
+    assert metrics_response.headers["content-type"].startswith("text/plain")
+    assert "# TYPE http_server_request_duration_seconds histogram" in metrics_response.text
+    assert 'http_route="/kb/search"' in metrics_response.text
+    assert 'http_response_status_code="200"' in metrics_response.text
+
+
+def test_kb_search_refuses_invalid_query_and_maps_upstream_failure(client, monkeypatch):
+    class FailedResponse:
+        status_code = 503
+
+    class FakeAsyncClient:
+        def __init__(self, timeout):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_value, traceback):
+            return None
+
+        async def get(self, url, params):
+            return FailedResponse()
+
+    monkeypatch.setattr(main.httpx, "AsyncClient", FakeAsyncClient)
+
+    missing = client.get("/kb/search")
+    too_long = client.get(f"/kb/search?q={'x' * 201}")
+    failed = client.get("/kb/search?q=force-error-itsmlab")
+
+    assert missing.status_code == 422
+    assert "error" in missing.json()
+    assert too_long.status_code == 422
+    assert "error" in too_long.json()
+    assert failed.status_code == 502
+    assert failed.json()["error"]["code"] == "upstream_unavailable"
