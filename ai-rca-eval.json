@@ -1,0 +1,80 @@
+{
+  "investigator": {
+    "agent": "recorded Lab 4 investigator",
+    "model": "qwen3:4b-instruct",
+    "mcp_server": "prom_mcp.py (mcp 2.2.0)",
+    "transcript": "ai-rca/transcript.md"
+  },
+  "hypotheses": [
+    {
+      "id": "H1",
+      "hypothesis": "The checkout service's span \"POST /api/checkout\" shows a significant increase in call count from 153 to 378 over the time window, indicating a high volume of requests, but this does not point to a failure; rather, it suggests high load, which is a contributing factor to latency.",
+      "component": null,
+      "predicts": "sum(rate(traces_span_metrics_calls_total{service_name=\"checkout\",span_kind=\"SPAN_KIND_SERVER\"}[5m])) > 0.2",
+      "at": "2026-10-12T05:06:19Z",
+      "result": false,
+      "verdict": "hallucinated",
+      "evidence": "The query returned no series at 05:06:19Z, so the server request rate did not exceed 0.2/s. It was 0.15/s at the 04:56:00Z baseline and 0.10/s at detection, contradicting the high-load prediction."
+    },
+    {
+      "id": "H2",
+      "hypothesis": "The span \"oteldemo.PaymentService/Charge\" has call counts rising from 51 to 182, and its duration metrics are not available, but its consistency in call rates suggests it is stable and not the source of degradation.",
+      "component": null,
+      "predicts": "histogram_quantile(0.99, sum by (le) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"payment\",span_kind=\"SPAN_KIND_SERVER\"}[5m]))) <= 10",
+      "at": "2026-10-12T05:06:19Z",
+      "result": false,
+      "verdict": "hallucinated",
+      "evidence": "The p99 stability prediction returned no series at detection because payment p99 was 40.4 ms, not at most 10 ms; the same query returned 3.28 ms at baseline. The snapshot contradicts the claim that latency was stable."
+    },
+    {
+      "id": "H3",
+      "hypothesis": "The span \"oteldemo.ProductCatalogService/GetProduct\" shows increasing duration from 85 to 344 milliseconds, and its call count grows from 85 to 344, indicating that the product catalog service is becoming increasingly slow, which may be a bottleneck in the checkout flow.",
+      "component": null,
+      "predicts": "histogram_quantile(0.99, sum by (le) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"product-catalog\",span_kind=\"SPAN_KIND_SERVER\"}[5m]))) > 100",
+      "at": "2026-10-12T05:06:19Z",
+      "result": false,
+      "verdict": "hallucinated",
+      "evidence": "The query returned no series: product-catalog p99 was 46.55 ms at detection and 46.11 ms at baseline, so the asserted increasing slow tail is not supported."
+    },
+    {
+      "id": "H4",
+      "hypothesis": "The span \"oteldemo.CheckoutService/PlaceOrder\" has call counts rising from 51 to 182 and duration increasing from 80 to 182 milliseconds, which shows a steady rise in latency, indicating it may be the primary service responsible for high checkout latency.",
+      "component": "checkout",
+      "predicts": "histogram_quantile(0.95, sum by (le) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"checkout\",span_name=\"oteldemo.CheckoutService/PlaceOrder\"}[5m]))) > 1000",
+      "at": "2026-10-12T05:06:00Z",
+      "result": true,
+      "verdict": "partially_correct",
+      "evidence": "PlaceOrder p95 was 5,250 ms at 05:06:00Z and the comparison returned no series at 04:56:00Z. Checkout was clearly slow, but this is a symptom; the measured internal checkout span stayed near 48 ms and shipping p99 reached 7,700 ms."
+    },
+    {
+      "id": "H5",
+      "hypothesis": "The span \"prepareOrderItemsAndShippingQuoteFromCart\" is internal and has a consistent duration increase from 80 to 182 milliseconds, suggesting a growing processing delay in the internal service logic and likely being a root cause of checkout latency.",
+      "component": null,
+      "predicts": "histogram_quantile(0.95, sum by (le) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"checkout\",span_name=\"prepareOrderItemsAndShippingQuoteFromCart\"}[5m]))) > 100",
+      "at": "2026-10-12T05:06:00Z",
+      "result": false,
+      "verdict": "hallucinated",
+      "evidence": "The prediction returned no series at 05:06:00Z. The measured internal span p95 was 47.89 ms at detection and 47.88 ms at baseline, contradicting the claimed growing delay."
+    },
+    {
+      "id": "H6",
+      "hypothesis": "Hypothesis based on duration metrics: The span \"oteldemo.PaymentService/Charge\" is not visible in the metrics, but its absence in the response suggests it might have failed, though no status_code=STATUS_CODE_ERROR was present; thus, this is not confirmed.",
+      "component": null,
+      "predicts": "sum(rate(traces_span_metrics_calls_total{service_name=\"payment\",span_name=\"oteldemo.PaymentService/Charge\",span_kind=\"SPAN_KIND_SERVER\",status_code=\"STATUS_CODE_ERROR\"}[5m])) > 0",
+      "at": "2026-10-12T05:06:19Z",
+      "result": false,
+      "verdict": "hallucinated",
+      "evidence": "The query returned no series at detection: no Payment Charge server-error rate was observed. The span was present in the snapshot, and the payment server p99 was 40.4 ms rather than a failure rate."
+    },
+    {
+      "id": "H7",
+      "hypothesis": "Final hypothesis: The most likely cause of checkout latency is the increasing duration of the \"prepareOrderItemsAndShippingQuoteFromCart\" internal span, which has duration rising from 80 to 182 milliseconds, directly impacting the checkout flow and contributing to end-to-end latency. This is supported by the query: traces_span_metrics_calls_total{service_name=\"checkout\", span_name=\"prepareOrderItemsAndShippingQuoteFromCart\"} by (span_kind) over the time window.",
+      "component": null,
+      "predicts": "histogram_quantile(0.95, sum by (le) (rate(traces_span_metrics_duration_milliseconds_bucket{service_name=\"checkout\",span_name=\"prepareOrderItemsAndShippingQuoteFromCart\"}[5m]))) > 100",
+      "at": "2026-10-12T05:06:00Z",
+      "result": false,
+      "verdict": "hallucinated",
+      "evidence": "The query returned no series at 05:06:00Z; the internal span p95 remained approximately 47.9 ms, not 80–182 ms. The transcript's supporting query also applies `by` to an unaggregated counter selector, so it is not valid PromQL."
+    }
+  ]
+}

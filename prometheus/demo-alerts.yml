@@ -1,0 +1,50 @@
+# ai-generated: 95% - Copilot adapted the official Lab 4 template using the published shop metrics and thresholds
+groups:
+  - name: shop-user-symptoms
+    rules:
+      - alert: ShopCheckoutErrors
+        expr: |
+          (
+            sum(rate(traces_span_metrics_calls_total{service_name="checkout", span_kind="SPAN_KIND_SERVER", status_code="STATUS_CODE_ERROR"}[5m]))
+            /
+            sum(rate(traces_span_metrics_calls_total{service_name="checkout", span_kind="SPAN_KIND_SERVER"}[5m]))
+          ) > 0.05
+        for: 1m
+        labels:
+          service: checkout
+          severity: P1
+        annotations:
+          summary: "Checkout server requests are failing"
+          description: "More than 5% of checkout server spans failed over the last 5 minutes."
+
+      - alert: ShopCheckoutSlow
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum by (le) (
+              rate(traces_span_metrics_duration_milliseconds_bucket{service_name="checkout", span_kind="SPAN_KIND_SERVER"}[5m])
+            )
+          ) > 2000
+        for: 1m
+        labels:
+          service: checkout
+          severity: P1
+        annotations:
+          summary: "Checkout requests have a slow tail"
+          description: "The checkout server p99 latency exceeded 2 seconds for one minute."
+
+      - alert: ShopShippingSlow
+        expr: |
+          histogram_quantile(
+            0.99,
+            sum by (le) (
+              rate(traces_span_metrics_duration_milliseconds_bucket{service_name="shipping", span_kind="SPAN_KIND_SERVER"}[5m])
+            )
+          ) > 2000
+        for: 4m
+        labels:
+          service: shipping
+          severity: P2
+        annotations:
+          summary: "Shipping requests have a slow tail"
+          description: "The shipping server p99 latency exceeded 2 seconds for four minutes."

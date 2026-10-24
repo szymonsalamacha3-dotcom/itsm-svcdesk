@@ -1,0 +1,10 @@
+<!-- ai-generated: 95% - Copilot compared both saved transcripts and re-executed their claims against the recorded snapshot -->
+# Investigator comparison
+
+The first transcript is the supplied `qwen3:4b-instruct` run; the second is a separate Copilot general-purpose investigator run. Both were evaluated against the same assigned snapshot with explicit UTC query times, and neither was given the sealed fault.
+
+The first investigator correctly noticed that checkout calls were involved, but it misread cumulative counter values as durations and used invalid PromQL containing `by` after a bare selector. Its PlaceOrder-latency hypothesis is partially correct: the saved p95 query returns 5,250 ms at 05:06:00Z versus 48 ms at the 04:56:00Z baseline. Its suggested internal `prepareOrderItemsAndShippingQuoteFromCart` root cause is contradicted: p95 was about 47.9 ms at both times. Product-catalog p99 was 46.55 ms, and payment errors were absent, so those specific claims were not supported.
+
+The second investigator was stronger about separating the checkout symptom from its measured child RPC calls. The selected downstream client error rate was zero while PlaceOrder p95 was 5,250 ms, and the frontend 500 co-symptom is supported by the query. However, its checkout-local explanation was only partially correct: the same snapshot shows shipping server p99 at 7,700 ms at 05:06:19Z, against 5.28 ms at baseline, while the preparatory checkout span stays near 48 ms. It did not identify the clearly supported shipping latency or ad server errors.
+
+The independent PromQL evidence provides the stronger causal direction: shipping p99 rose to 7,700 ms, and ad server errors reached 0.00833/s; these map to the published `intlShippingSlowdown` and `adFailure` controls. Thus the first investigator hallucinated its proposed internal-span cause, while the second investigator correctly characterized checkout latency as an impact but did not isolate the upstream shipping symptom. The recorded metrics support these service-level conclusions; they do not expose flag variants or prove the exact per-flag rollback sequence.

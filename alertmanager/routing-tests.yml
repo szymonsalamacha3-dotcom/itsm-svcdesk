@@ -1,0 +1,17 @@
+# ai-generated: 95% - Copilot wrote these cases from the implemented routing and inhibition rules
+routes:
+  - labels: {alertname: ShopCheckoutSlow, service: checkout, severity: P1}
+    receivers: [pager]
+  - labels: {alertname: ShopShippingSlow, service: shipping, severity: P2}
+    receivers: [chat]
+  - labels: {alertname: KbSearchErrorsBurnSlow, service: svcdesk, slo: availability, severity: P2}
+    receivers: [chat]
+  - labels: {alertname: ShopCheckoutErrors, service: checkout, severity: P1}
+    receivers: [pager]
+inhibitions:
+  - source: {alertname: ShopCheckoutSlow, service: checkout, severity: P1}
+    target: {alertname: ShopShippingSlow, service: checkout, severity: P2}
+    inhibited: true
+  - source: {alertname: ShopCheckoutSlow, service: checkout, severity: P1}
+    target: {alertname: ShopShippingSlow, service: payment, severity: P2}
+    inhibited: false
