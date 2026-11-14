@@ -1,0 +1,23 @@
+# ai-generated: 100% - OpenAI Copilot wrote project-specific Semgrep rules and tests for Lab 5 P-31
+rules:
+  - id: broad-exception-handler
+    languages: [python]
+    severity: WARNING
+    message: Catch only expected request parsing errors so programming failures are not disguised as client errors.
+    pattern: |
+      try:
+          ...
+      except Exception:
+          ...
+
+  - id: assume-utc-for-naive-time
+    languages: [python]
+    severity: WARNING
+    message: Assigning UTC to a naive timestamp can hide an ambiguous local time.
+    pattern: $VALUE.replace(tzinfo=timezone.utc)
+
+  - id: deprecated-fastapi-startup-hook
+    languages: [python]
+    severity: WARNING
+    message: FastAPI on_event startup hooks are deprecated; migrate this initialization to a lifespan handler.
+    pattern: '@app.on_event("startup")'
