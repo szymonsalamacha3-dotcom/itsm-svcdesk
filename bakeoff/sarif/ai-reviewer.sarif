@@ -1,0 +1,372 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "ai-reviewer",
+          "informationUri": "https://github.com/swasik/itsm-2026-template",
+          "rules": [
+            {
+              "id": "attachment-path-traversal",
+              "name": "attachment-path-traversal",
+              "shortDescription": {
+                "text": "attachment-path-traversal"
+              },
+              "properties": {
+                "tags": [
+                  "CWE-22"
+                ]
+              }
+            },
+            {
+              "id": "disabled-tls-verification",
+              "name": "disabled-tls-verification",
+              "shortDescription": {
+                "text": "disabled-tls-verification"
+              },
+              "properties": {
+                "tags": [
+                  "CWE-295"
+                ]
+              }
+            },
+            {
+              "id": "missing-ticket-ownership-check",
+              "name": "missing-ticket-ownership-check",
+              "shortDescription": {
+                "text": "missing-ticket-ownership-check"
+              },
+              "properties": {
+                "tags": [
+                  "CWE-639"
+                ]
+              }
+            },
+            {
+              "id": "customer-webhook-ssrf",
+              "name": "customer-webhook-ssrf",
+              "shortDescription": {
+                "text": "customer-webhook-ssrf"
+              },
+              "properties": {
+                "tags": [
+                  "CWE-918"
+                ]
+              }
+            },
+            {
+              "id": "hardcoded-jwt-secret",
+              "name": "hardcoded-jwt-secret",
+              "shortDescription": {
+                "text": "hardcoded-jwt-secret"
+              },
+              "properties": {
+                "tags": [
+                  "CWE-798"
+                ]
+              }
+            },
+            {
+              "id": "hardcoded-smtp-password",
+              "name": "hardcoded-smtp-password",
+              "shortDescription": {
+                "text": "hardcoded-smtp-password"
+              },
+              "properties": {
+                "tags": [
+                  "CWE-798"
+                ]
+              }
+            },
+            {
+              "id": "hardcoded-private-signing-key",
+              "name": "hardcoded-private-signing-key",
+              "shortDescription": {
+                "text": "hardcoded-private-signing-key"
+              },
+              "properties": {
+                "tags": [
+                  "CWE-321"
+                ]
+              }
+            },
+            {
+              "id": "undersized-rsa-key",
+              "name": "undersized-rsa-key",
+              "shortDescription": {
+                "text": "undersized-rsa-key"
+              },
+              "properties": {
+                "tags": [
+                  "CWE-326"
+                ]
+              }
+            },
+            {
+              "id": "vulnerable-jinja2",
+              "name": "vulnerable-jinja2",
+              "shortDescription": {
+                "text": "vulnerable-jinja2"
+              },
+              "properties": {
+                "tags": [
+                  "CWE-937"
+                ]
+              }
+            },
+            {
+              "id": "vulnerable-requests",
+              "name": "vulnerable-requests",
+              "shortDescription": {
+                "text": "vulnerable-requests"
+              },
+              "properties": {
+                "tags": [
+                  "CWE-937"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "attachment-path-traversal",
+          "level": "warning",
+          "message": {
+            "text": "The request-derived ticket ID and filename are joined into a filesystem path without checking that the resolved path remains under the attachments directory. Traversal sequences can escape that directory and read other files accessible to the service."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lab5-canary/app/attachment_read.py"
+                },
+                "region": {
+                  "startLine": 9,
+                  "endLine": 11
+                }
+              }
+            }
+          ],
+          "properties": {
+            "class": "path-traversal"
+          }
+        },
+        {
+          "ruleId": "disabled-tls-verification",
+          "level": "warning",
+          "message": {
+            "text": "TLS certificate verification is disabled for the avatar request, allowing a network attacker to impersonate the identity provider and tamper with the response."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lab5-canary/app/avatar_fetch.py"
+                },
+                "region": {
+                  "startLine": 7,
+                  "endLine": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "class": "insecure-transport"
+          }
+        },
+        {
+          "ruleId": "missing-ticket-ownership-check",
+          "level": "warning",
+          "message": {
+            "text": "The function accepts a customer identity but never checks that the requested ticket belongs to that customer. A logged-in customer can retrieve another customer's ticket by supplying its ID."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lab5-canary/app/ticket_access.py"
+                },
+                "region": {
+                  "startLine": 14,
+                  "endLine": 17
+                }
+              }
+            }
+          ],
+          "properties": {
+            "class": "access-control"
+          }
+        },
+        {
+          "ruleId": "customer-webhook-ssrf",
+          "level": "warning",
+          "message": {
+            "text": "The customer-registered callback URL is used directly for a server-side request. A customer can direct the relay to internal or otherwise restricted services."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lab5-canary/app/webhook_relay.py"
+                },
+                "region": {
+                  "startLine": 7,
+                  "endLine": 7
+                }
+              }
+            }
+          ],
+          "properties": {
+            "class": "ssrf"
+          }
+        },
+        {
+          "ruleId": "hardcoded-jwt-secret",
+          "level": "warning",
+          "message": {
+            "text": "A JWT signing secret is hard-coded in configuration. Anyone who obtains the source can use it to forge tokens if the portal uses this value for signing."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lab5-canary/config/jwt_secret.py"
+                },
+                "region": {
+                  "startLine": 2,
+                  "endLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "class": "secret"
+          }
+        },
+        {
+          "ruleId": "hardcoded-smtp-password",
+          "level": "warning",
+          "message": {
+            "text": "An SMTP password is hard-coded in configuration, exposing the mail account to anyone who obtains the source."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lab5-canary/config/mailer.py"
+                },
+                "region": {
+                  "startLine": 4,
+                  "endLine": 4
+                }
+              }
+            }
+          ],
+          "properties": {
+            "class": "secret"
+          }
+        },
+        {
+          "ruleId": "hardcoded-private-signing-key",
+          "level": "warning",
+          "message": {
+            "text": "A report-signing private key is embedded in source code. Anyone who obtains it can forge signatures wherever this key is trusted."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lab5-canary/config/signing_key.py"
+                },
+                "region": {
+                  "startLine": 2,
+                  "endLine": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "class": "secret"
+          }
+        },
+        {
+          "ruleId": "undersized-rsa-key",
+          "level": "warning",
+          "message": {
+            "text": "The embedded RSA private key uses a 512-bit modulus, which is cryptographically inadequate. An attacker can recover the private key and forge report signatures."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lab5-canary/config/signing_key.py"
+                },
+                "region": {
+                  "startLine": 2,
+                  "endLine": 10
+                }
+              }
+            }
+          ],
+          "properties": {
+            "class": "weak-crypto"
+          }
+        },
+        {
+          "ruleId": "vulnerable-jinja2",
+          "level": "warning",
+          "message": {
+            "text": "Jinja2 2.10 is affected by CVE-2019-10906, a sandbox escape; upgrade to a fixed release."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lab5-canary/requirements.txt"
+                },
+                "region": {
+                  "startLine": 1,
+                  "endLine": 1
+                }
+              }
+            }
+          ],
+          "properties": {
+            "class": "vulnerable-dependency"
+          }
+        },
+        {
+          "ruleId": "vulnerable-requests",
+          "level": "warning",
+          "message": {
+            "text": "requests 2.19.1 is affected by CVE-2018-18074, which can leak authorization headers on redirects; upgrade to a fixed release."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "lab5-canary/requirements.txt"
+                },
+                "region": {
+                  "startLine": 2,
+                  "endLine": 2
+                }
+              }
+            }
+          ],
+          "properties": {
+            "class": "vulnerable-dependency"
+          }
+        }
+      ],
+      "properties": {
+        "model": "OpenAI ChatGPT (exact model identifier unavailable)",
+        "route": "local"
+      }
+    }
+  ]
+}
